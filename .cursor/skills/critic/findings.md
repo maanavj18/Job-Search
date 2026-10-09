@@ -19,7 +19,6 @@ The critic appends findings here. Evidence must be reproducible. No names, email
 
 | ID | Sev | Area | Finding | Evidence | Status |
 |----|-----|------|---------|----------|--------|
-| C01 | P0 | answers | Profile matching uses substring keywords, so question-shaped labels get unrelated facts at `high` confidence ("Please state why..." gets the state, "In what capacity..." gets the city, "Undergraduate GPA" gets the graduation date). | `audit`: 11 of 11 `misfill:*` labels | open |
 | C02 | P0 | outcome | The last run drafted nothing. Ingest stopped at software-engineering role 526 of 628, four other sections were never stored, and 94 supported jobs sit at `new` with no application. Offline replay ingests all 1,894 roles in 2 s, so the stall was environmental and undiagnosable because no run was logged. | `audit`: `run:stuck-new`, `run:no-record`. Run log added in this cycle; root cause still unknown until the next full run. | open |
 | C03 | P0 | self-improvement | `learn` reported "None. Do not invent a code change." while zero drafts existed. It only sees failed jobs, overrides, and scan notes. `lessons.md` has no entries, so the improve loop has never completed a cycle. | `python -m app.cli learn` on the current database | open |
 | C04 | P1 | answers | The answer bank labels any fuzzy match at 90 or above as `bank`/`high`, the same as an exact match. Corrections to those are never logged because `log_override` ignores `bank`. A saved "Why Anduril?" essay is offered for "Why Sigma Computing?" at 86. | `match_answer` probe; `app/learn.py` `log_override` | open |
@@ -45,7 +44,9 @@ The critic appends findings here. Evidence must be reproducible. No names, email
 | ID | Finding | Fix |
 |----|---------|-----|
 | C14 | No version control and no `AGENTS.md` for a loop that edits its own code. | `git init`, baseline `4c81b83`; `AGENTS.md` added |
+| C01 | Substring profile matching filled question-shaped labels with unrelated facts at `high` confidence (11 of 11 audit labels). | Facts need a whole-word keyword, no yes/no or essay prefix, and a short label or "your X". Sponsorship and authorization only answer the standard yes/no form. `test_question_labels_never_get_unrelated_profile_facts` |
 
 ## Log
 
 - 2026-10-09 Initial critique. Added `audit`, run log, critic skill, ledger, `AGENTS.md`, git baseline.
+- 2026-10-09 C01 fixed. Audit `misfill:*` went from 11 to 0, positive controls still fill.

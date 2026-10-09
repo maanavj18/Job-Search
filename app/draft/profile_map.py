@@ -7,6 +7,15 @@ from rapidfuzz import fuzz
 from app.draft.bank import match_answer
 
 _DECLINE = ("decline", "do not wish", "don't wish", "dont wish", "prefer not", "not to self")
+_YES_NO = re.compile(r"^(are|is|do|does|did|have|has|can|could|will|would|should|may)\b")
+_ASKS_YOU = re.compile(r"\b(do|will|would|are|have) you\b")
+_PROMPT = re.compile(
+    r"^(describe|explain|tell|why|how|list|share|in what|in which|to what"
+    r"|please (state|describe|explain|tell|share|list))\b"
+)
+_OPEN_QUESTION = re.compile(r"^(which|what|where|in which)\b")
+_ACKNOWLEDGE = re.compile(r"\b(understand|acknowledge|aware|confirm|agree)\b")
+_SHORT_LABEL = 40
 
 
 def draft_fields(
@@ -82,10 +91,15 @@ def _apply_profile(field: dict, profile: dict) -> bool:
         return True
 
     if "sponsor" in label:
-        desired = "Yes" if profile.get("needs_sponsorship") else "No"
-        return _set_choice(field, desired)
+        if _yes_no(label) and re.search(r"\b(require|need)", label) and not _ACKNOWLEDGE.search(label):
+            desired = "Yes" if profile.get("needs_sponsorship") else "No"
+            return _set_choice(field, desired)
+        field["skip_llm"] = True
+        field["confidence"] = "blank"
+        field["notes"] = "This sponsorship question is phrased unusually. Answer it yourself."
+        return True
 
-    if "authoriz" in label and "work" in label:
+    if "authoriz" in label and "work" in label and _yes_no(label) and not _ACKNOWLEDGE.search(label):
         desired = "Yes" if profile.get("work_authorized", True) else "No"
         return _set_choice(field, desired)
 
@@ -104,26 +118,26 @@ def _fact(label: str, profile: dict) -> tuple[str, bool]:
     month, year = _graduation_parts(str(profile.get("graduation") or ""))
     checks: list[tuple[bool, str, bool]] = [
         ("end date month" in label, month, True),
-        ("end date year" in label or ("year" in label and "end" in label), year, True),
-        ("discipline" in label, str(profile.get("major") or ""), True),
-        (_wants(label, "preferred") and "name" in label, str(profile.get("first_name") or ""), False),
-        ("first name" in label, str(profile.get("first_name") or ""), False),
-        ("last name" in label, str(profile.get("last_name") or ""), False),
-        ("email" in label and "send" not in label, str(profile.get("email") or ""), False),
-        ("phone" in label or "mobile" in label, str(profile.get("phone") or ""), False),
+        ("end date year" in label or re.search(r"\b(end|graduation) year\b", label) is not None, year, True),
+        (_asks_for(label, "discipline"), str(profile.get("major") or ""), True),
+        (_asks_for(label, "preferred name", "preferred first name"), str(profile.get("first_name") or ""), False),
+        (_asks_for(label, "first name"), str(profile.get("first_name") or ""), False),
+        (_asks_for(label, "last name"), str(profile.get("last_name") or ""), False),
+        (_asks_for(label, "email") and "send" not in label, str(profile.get("email") or ""), False),
+        (_asks_for(label, "phone", "mobile"), str(profile.get("phone") or ""), False),
         (_wants_link(label, "linkedin"), str(profile.get("linkedin") or ""), True),
         (_wants_link(label, "github"), str(profile.get("github") or ""), True),
         (_wants_link(label, "website") or _wants_link(label, "portfolio"), str(profile.get("website") or ""), True),
         (_school(label), str(profile.get("school") or ""), False),
-        ("degree" in label and "advanced" not in label, str(profile.get("degree") or ""), False),
-        ("major" in label or "field of study" in label, str(profile.get("major") or ""), False),
-        ("graduation" in label or "graduate" in label, str(profile.get("graduation") or ""), True),
-        ("gpa" in label, str(profile.get("gpa") or ""), True),
-        ("city" in label, str(address.get("city") or ""), True),
-        (_has_word(label, "state"), str(address.get("state") or ""), True),
-        ("postal" in label or "zip" in label, str(address.get("postal_code") or ""), True),
-        ("country" in label, str(address.get("country") or ""), False),
-        ("address" in label and "email" not in label, str(address.get("line1") or ""), True),
+        (_asks_for(label, "degree") and "advanced" not in label, str(profile.get("degree") or ""), False),
+        (_asks_for(label, "major", "field of study"), str(profile.get("major") or ""), False),
+        (_asks_for(label, "graduation", "graduate"), str(profile.get("graduation") or ""), True),
+        (_asks_for(label, "gpa"), str(profile.get("gpa") or ""), True),
+        (_asks_for(label, "city"), str(address.get("city") or ""), True),
+        (_asks_for(label, "state"), str(address.get("state") or ""), True),
+        (_asks_for(label, "postal", "postal code", "zip", "zip code"), str(address.get("postal_code") or ""), True),
+        (_asks_for(label, "country"), str(address.get("country") or ""), False),
+        (_asks_for(label, "address") and "email" not in label, str(address.get("line1") or ""), True),
     ]
     for matched, value, blank_if_missing in checks:
         if matched:
@@ -158,24 +172,37 @@ def _graduation_parts(text: str) -> tuple[str, str]:
     return found_month, found_year
 
 
-def _school(label: str) -> bool:
-    if any(token in label for token in ("diploma", "gpa", "major", "degree")):
+def _yes_no(label: str) -> bool:
+    if _OPEN_QUESTION.match(label):
         return False
-    if any(token in label for token in ("university", "college")):
-        return True
-    return "school" in label and ("name" in label or len(label) <= 40)
+    return _YES_NO.match(label) is not None or _ASKS_YOU.search(label) is not None
+
+
+def _asks_for(label: str, *keywords: str) -> bool:
+    """True when the label asks for the fact itself, not a question that mentions it."""
+    if _YES_NO.match(label) or _PROMPT.match(label):
+        return False
+    short = len(label.strip(" *?:")) <= _SHORT_LABEL
+    for keyword in keywords:
+        if not _has_word(label, keyword):
+            continue
+        if short or re.search(rf"\byour\s+(?:\w+\s+)?{re.escape(keyword)}\b", label):
+            return True
+    return False
+
+
+def _school(label: str) -> bool:
+    if any(token in label for token in ("diploma", "gpa", "major", "degree", "high school")):
+        return False
+    return _asks_for(label, "school", "school name", "university", "college")
 
 
 def _wants_link(label: str, keyword: str) -> bool:
-    if keyword not in label:
+    if keyword not in label or _YES_NO.match(label) or _PROMPT.match(label):
         return False
     if any(token in label for token in ("url", "link", "profile", "handle", "username")):
         return True
-    return len(label) <= 40
-
-
-def _wants(label: str, keyword: str) -> bool:
-    return keyword in label
+    return len(label) <= _SHORT_LABEL
 
 
 def _has_word(label: str, word: str) -> bool:

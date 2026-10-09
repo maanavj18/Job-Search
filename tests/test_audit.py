@@ -1,4 +1,4 @@
-from app.audit import build_audit
+from app.audit import answer_safety, build_audit
 from app.db import connect, finish_run, start_run, upsert_job
 
 
@@ -44,6 +44,10 @@ def test_audit_flags_stuck_jobs_and_unfinished_runs(tmp_path):
     finish_run(conn, run_id, {"parsed": 2, "drafted": 0, "failed": 0})
     ids = _ids(conn, tmp_path)
     assert not {"run:unfinished", "run:no-record", "run:error"} & ids
+
+
+def test_question_labels_never_get_unrelated_profile_facts():
+    assert answer_safety() == []
 
 
 def test_audit_flags_a_run_that_raised(tmp_path):
