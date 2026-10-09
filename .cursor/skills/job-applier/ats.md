@@ -2,8 +2,9 @@
 
 Classify the apply link, not the Simplify link, when both are present.
 
-- Greenhouse: `job-boards.greenhouse.io/{token}/jobs/{id}` or `boards.greenhouse.io/{token}/jobs/{id}`
-  - Questions: `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{id}?questions=true`
+- Greenhouse: `job-boards.greenhouse.io/{token}/jobs/{id}` or `boards.greenhouse.io/{token}/jobs/{id}`, either with an optional `.eu` before `.greenhouse.io`
+  - Embed links: `.../embed/job_app?for={token}&token={id}`. An embed link without `for` is resolved by following its redirect.
+  - Questions: `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{id}?questions=true`. EU boards use the same API host.
 - Lever: `jobs.lever.co/{token}/{uuid}` with an optional `/apply`
 - Ashby: `jobs.ashbyhq.com/{token}/{uuid}` with an optional `/application`
 

@@ -4,7 +4,7 @@ import httpx
 
 from app.draft.profile_map import draft_fields
 from app.draft.questions import greenhouse_fields, standard_fields
-from app.ingest.classify import choose_application, classify_url, only_simplify
+from app.ingest.classify import choose_application, classify_url, needs_resolve
 from app.ingest.filters import skip_reason
 from app.ingest.readme import Role, canonical_url, parse_readme
 
@@ -214,7 +214,7 @@ def _draft(conn, job_id, fields, profile, answers, save_application, drafts, not
 def _store_role(conn, role: Role, source: str, profile: dict, filters: dict, client, upsert_job):
     url, ats, token, job_id = choose_application(role.urls)
     reason = skip_reason(role, profile, filters)
-    if reason is None and only_simplify(role.urls, ats):
+    if reason is None and needs_resolve(role.urls, url, ats):
         try:
             resolved = str(client.get(url, follow_redirects=True, timeout=20).url)
             ats, token, job_id = classify_url(resolved)

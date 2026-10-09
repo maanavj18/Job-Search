@@ -7,7 +7,7 @@ The critic appends findings here. Evidence must be reproducible. No names, email
 - [x] Outcome: did the last run produce drafts the user can review?
 - [x] Answer safety: profile matching, answer bank, model fill
 - [ ] Ingest: README parsing, sections, closed flags, dedupe
-- [ ] Classification and coverage: ATS URL shapes, manual share
+- [x] Classification and coverage: ATS URL shapes, manual share
 - [ ] Drafting pipeline: ordering, persistence, resumability
 - [ ] Review UI: saving, answer bank writes, status changes
 - [ ] Fill: browser filling, never submitting, concurrent opens
@@ -23,7 +23,8 @@ The critic appends findings here. Evidence must be reproducible. No names, email
 | C03 | P0 | self-improvement | `learn` reported "None. Do not invent a code change." while zero drafts existed. It only sees failed jobs, overrides, and scan notes. `lessons.md` has no entries, so the improve loop has never completed a cycle. | `python -m app.cli learn` on the current database | open |
 | C04 | P1 | answers | The answer bank labels any fuzzy match at 90 or above as `bank`/`high`, the same as an exact match. Corrections to those are never logged because `log_override` ignores `bank`. A saved "Why Anduril?" essay is offered for "Why Sigma Computing?" at 86. | `match_answer` probe; `app/learn.py` `log_override` | open |
 | C05 | P1 | drafting | Every Lever and Ashby browser scan runs before any draft is saved. 51 Greenhouse jobs that need no browser wait behind up to 43 page loads, and a killed run keeps nothing. | `app/draft/pipeline.py` `run_pipeline` order | open |
-| C06 | P1 | ingest | `job-boards.eu.greenhouse.io` (5 jobs) and one `boards.greenhouse.io` shape are classified manual. | `audit`: `classify:*` | open |
+| C17 | P1 | drafting | Drafts made while `profile.yaml` is missing are locked at `needs_review` and never redrafted, so running now would fill 94 applications for the example person and keep them after the real profile exists. C02 cannot be verified with a real run until C12 is done. | `app/db.py` `LOCKED_STATUSES`, `_store_role` skips jobs with an application | open |
+| C18 | P2 | ingest | 19 stored jobs use company-hosted Greenhouse links (`?gh_jid=`) and are classified manual. The board token is not in the URL. | `jobs.url` query params on the current database | open |
 | C07 | P1 | review | Saving a review writes profile facts such as GPA, school, and city into `answers.yaml`. `is_identity` only covers names, contacts, and links. The answer policy says those belong in `profile.yaml`. | `app/web.py` `_apply_form`, `app/draft/bank.py` `is_identity` | open |
 | C08 | P1 | answers | The model call sends the whole profile, including phone and address, for every application. The default model is `gpt-4o-mini`. Essay questions invite fabricated answers that are only marked `check`. | `app/draft/llm.py` | open |
 | C09 | P2 | fill | A second "Save and open filled form" while a window is open collides on the persistent browser profile. The error only reaches `fill.log` and the page still says it is opening. | `app/apply/fill.py` `spawn_fill` | open |
@@ -44,9 +45,11 @@ The critic appends findings here. Evidence must be reproducible. No names, email
 | ID | Finding | Fix |
 |----|---------|-----|
 | C14 | No version control and no `AGENTS.md` for a loop that edits its own code. | `git init`, baseline `4c81b83`; `AGENTS.md` added |
+| C06 | EU Greenhouse boards and embed links were classified manual. Stripping the whole query would also have merged every embed link into one dedupe key. | `.eu` hosts and `embed/job_app?for=&token=` classify as Greenhouse, embed links without `for` are resolved by redirect, embed dedupe keys keep `for` and `token`. Stored rows reclassify on the next run. `test_greenhouse_eu_and_embed_links_are_supported`, `test_canonical_url_drops_tracking_but_keeps_job_identity` |
 | C01 | Substring profile matching filled question-shaped labels with unrelated facts at `high` confidence (11 of 11 audit labels). | Facts need a whole-word keyword, no yes/no or essay prefix, and a short label or "your X". Sponsorship and authorization only answer the standard yes/no form. `test_question_labels_never_get_unrelated_profile_facts` |
 
 ## Log
 
 - 2026-10-09 Initial critique. Added `audit`, run log, critic skill, ledger, `AGENTS.md`, git baseline.
 - 2026-10-09 C01 fixed. Audit `misfill:*` went from 11 to 0, positive controls still fill.
+- 2026-10-09 C06 fixed. A broad query-keeping dedupe change would have re-keyed 32 stuck jobs, so it was narrowed to embed links (1 row changes). Added C17 and C18.

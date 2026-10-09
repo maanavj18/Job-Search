@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import parse_qs, urlsplit
 
 _GREENHOUSE = re.compile(
-    r"https?://(?:job-boards|boards)\.greenhouse\.io/([^/?#]+)/jobs/(\d+)",
+    r"https?://(?:job-boards|boards)(?:\.eu)?\.greenhouse\.io/([^/?#]+)/jobs/(\d+)",
+    re.I,
+)
+_GREENHOUSE_EMBED = re.compile(
+    r"https?://(?:job-boards|boards)(?:\.eu)?\.greenhouse\.io/embed/job_app\?",
     re.I,
 )
 _LEVER = re.compile(
@@ -20,6 +25,12 @@ def classify_url(url: str) -> tuple[str, str | None, str | None]:
     greenhouse = _GREENHOUSE.search(url)
     if greenhouse:
         return "greenhouse", greenhouse.group(1), greenhouse.group(2)
+    if _GREENHOUSE_EMBED.match(url):
+        query = parse_qs(urlsplit(url).query)
+        board = (query.get("for") or [""])[0]
+        job_id = (query.get("token") or [""])[0]
+        if board and job_id.isdigit():
+            return "greenhouse", board, job_id
     lever = _LEVER.search(url)
     if lever:
         return "lever", lever.group(1), lever.group(2)
@@ -46,3 +57,10 @@ def choose_application(urls: list[str]) -> tuple[str, str, str | None, str | Non
 
 def only_simplify(urls: list[str], ats: str) -> bool:
     return ats == "manual" and bool(urls) and all("simplify.jobs" in url for url in urls)
+
+
+def needs_resolve(urls: list[str], url: str, ats: str) -> bool:
+    """True when following redirects may reveal a supported board link."""
+    if ats != "manual":
+        return False
+    return only_simplify(urls, ats) or _GREENHOUSE_EMBED.match(url) is not None

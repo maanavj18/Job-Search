@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 
 FLAG_CHARS = {
@@ -18,6 +18,7 @@ CONTINUATIONS = {"↳", "->", "→", ""}
 _AGE = re.compile(r"(\d+)\s*(d|w|mo)\b", re.I)
 _HEADING = re.compile(r"^##\s+(.+)$", re.M)
 _TABLE = re.compile(r"<table\b.*?</table>", re.I | re.S)
+_IDENTITY_KEYS = {"for", "token"}
 
 
 @dataclass
@@ -116,7 +117,10 @@ def _company_name(text: str) -> str:
 def canonical_url(url: str) -> str:
     parts = urlsplit(url.strip())
     path = parts.path.rstrip("/")
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, "", ""))
+    query = ""
+    if path.endswith("/embed/job_app"):
+        query = urlencode(sorted((key, value) for key, value in parse_qsl(parts.query) if key in _IDENTITY_KEYS))
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, query, ""))
 
 
 def parse_readme(text: str) -> list[Role]:
