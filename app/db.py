@@ -43,6 +43,16 @@ CREATE TABLE IF NOT EXISTS applications (
   submitted_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS runs (
+  id INTEGER PRIMARY KEY,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  parsed INTEGER,
+  drafted INTEGER,
+  failed INTEGER,
+  error TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 """
 
@@ -230,6 +240,32 @@ def list_jobs(conn: sqlite3.Connection, status: str | None = None) -> list[sqlit
             """
         )
     )
+
+
+def start_run(conn: sqlite3.Connection) -> int:
+    cursor = conn.execute("INSERT INTO runs (started_at) VALUES (?)", (now(),))
+    conn.commit()
+    return int(cursor.lastrowid)
+
+
+def finish_run(conn: sqlite3.Connection, run_id: int, summary: dict | None, error: str | None = None) -> None:
+    summary = summary or {}
+    conn.execute(
+        "UPDATE runs SET finished_at = ?, parsed = ?, drafted = ?, failed = ?, error = ? WHERE id = ?",
+        (
+            now(),
+            summary.get("parsed"),
+            summary.get("drafted"),
+            summary.get("failed"),
+            error[:2000] if error else None,
+            run_id,
+        ),
+    )
+    conn.commit()
+
+
+def last_run(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
 
 
 def status_counts(conn: sqlite3.Connection) -> dict[str, int]:

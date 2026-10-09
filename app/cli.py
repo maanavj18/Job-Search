@@ -6,8 +6,9 @@ import sys
 import httpx
 import uvicorn
 
+from app.audit import build_audit, render_audit
 from app.config import load_answers, load_env, load_filters, load_profile, load_sources
-from app.db import connect, status_counts
+from app.db import connect, finish_run, start_run, status_counts
 from app.draft.pipeline import run_pipeline
 from app.learn import build_report, lessons_path, load_corrections, render_report
 from app.notify.email import send_digest
@@ -27,6 +28,7 @@ def main(argv: list[str] | None = None) -> None:
     serve = sub.add_parser("serve", help="Open the local review page")
     serve.add_argument("--port", type=int, default=8000)
     sub.add_parser("learn", help="Summarize misses the agent can fix")
+    sub.add_parser("audit", help="Check the app against what it should have produced")
 
     args = parser.parse_args(argv)
     load_env(repo_root())
@@ -35,6 +37,9 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args.command == "learn":
         _learn()
+        return
+    if args.command == "audit":
+        _audit()
         return
     _run(args.limit, not args.skip_browser)
     if args.serve:
@@ -46,22 +51,29 @@ def _run(limit: int, extract: bool) -> None:
     profile, using_example = load_profile(root)
     if using_example:
         _out("Using the example profile. Copy profile/profile.example.yaml to profile/profile.yaml before real applications.")
-    with httpx.Client(
-        headers={"User-Agent": "job-search-local/0.1"},
-        follow_redirects=True,
-        timeout=60,
-    ) as client:
-        summary = run_pipeline(
-            conn=connect(),
-            sources=load_sources(root),
-            filters=load_filters(root),
-            profile=profile,
-            answers=load_answers(root),
-            client=client,
-            limit=limit,
-            extract=extract,
-            log=_out,
-        )
+    conn = connect()
+    run_id = start_run(conn)
+    try:
+        with httpx.Client(
+            headers={"User-Agent": "job-search-local/0.1"},
+            follow_redirects=True,
+            timeout=60,
+        ) as client:
+            summary = run_pipeline(
+                conn=conn,
+                sources=load_sources(root),
+                filters=load_filters(root),
+                profile=profile,
+                answers=load_answers(root),
+                client=client,
+                limit=limit,
+                extract=extract,
+                log=_out,
+            )
+    except BaseException as exc:
+        finish_run(conn, run_id, None, f"{type(exc).__name__}: {exc}")
+        raise
+    finish_run(conn, run_id, summary)
     if summary["new_drafts"]:
         try:
             if send_digest(summary["new_drafts"]):
@@ -89,6 +101,14 @@ def _learn() -> None:
     text = lessons.read_text(encoding="utf-8") if lessons.exists() else ""
     report = render_report(build_report(connect(), load_corrections(), text))
     path = data_dir() / "learn-report.md"
+    path.write_text(report, encoding="utf-8")
+    _out(report)
+    _out(f"Wrote {path}")
+
+
+def _audit() -> None:
+    report = render_audit(build_audit(connect(), repo_root()))
+    path = data_dir() / "audit-report.md"
     path.write_text(report, encoding="utf-8")
     _out(report)
     _out(f"Wrote {path}")
