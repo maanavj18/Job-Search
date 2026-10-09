@@ -1,0 +1,31 @@
+# Copy this file to profile/profile.yaml and replace every value with your own.
+# The app will not invent facts that you leave blank.
+
+first_name: Alex
+last_name: Example
+email: alex.example@email.com
+phone: "+1-614-555-0100"
+linkedin: https://www.linkedin.com/in/example
+github: https://github.com/example
+website: ""
+school: The Ohio State University
+degree: Bachelor of Science
+major: Computer Science
+graduation: May 2027
+gpa: ""
+work_authorized: true
+needs_sponsorship: false
+us_citizen: true
+has_advanced_degree: false
+address:
+  line1: ""
+  city: Columbus
+  state: OH
+  postal_code: ""
+  country: United States
+resume_path: ""
+eeo:
+  gender: decline
+  race: decline
+  veteran: decline
+  disability: decline

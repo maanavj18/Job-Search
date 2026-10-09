@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+profile/profile.yaml
+profile/answers.yaml
+.cursor/learn-next.json
+.cursor/critique-next.json
+data/
+*.egg-info/
+*.pdf
+*.docx

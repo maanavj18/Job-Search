@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <form action="done.html">
+    <label id="veteran_status-label" for="veteran_status">Veteran Status</label>
+    <input id="veteran_status" role="combobox" aria-labelledby="veteran_status-label">
+    <ul id="veteran-list" hidden>
+      <li role="option">I don't wish to answer</li>
+      <li role="option">I am not a protected veteran</li>
+    </ul>
+    <label for="first_name">First Name</label>
+    <input id="first_name" aria-label="First Name">
+    <button type="submit">Submit application</button>
+  </form>
+  <script>
+    const box = document.getElementById("veteran_status");
+    const list = document.getElementById("veteran-list");
+    box.addEventListener("click", () => { list.hidden = false; });
+    box.addEventListener("input", () => { list.hidden = false; });
+    for (const option of list.querySelectorAll("[role=option]")) {
+      option.addEventListener("click", () => {
+        box.value = option.textContent;
+        list.hidden = true;
+      });
+    }
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") list.hidden = true;
+    });
+  </script>
+</body>
+</html>

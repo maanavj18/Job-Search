@@ -1,0 +1,6 @@
+# Section ids: software-engineering, data-science, product, quant, hardware
+sections:
+  - software-engineering
+
+# Set to a number of days to ignore older rows. Null keeps every age.
+max_age_days:

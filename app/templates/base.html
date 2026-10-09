@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job Search{% endblock %}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c2430;
+      --muted: #5c6b7a;
+      --line: #e4ddd2;
+      --paper: #f6f3ee;
+      --card: #fffcf8;
+      --accent: #1d4e89;
+      --good: #0f6b4c;
+      --warn: #8a5a00;
+      --bad: #8d2f39;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.45;
+    }
+    header, main { width: min(980px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 28px 0 8px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    a { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .banner, .notice {
+      background: #fff4d6;
+      border: 1px solid #efd48a;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+    .notice.ok { background: #e7f6ef; border-color: #b7e0cc; }
+    nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    nav a {
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 12px;
+    }
+    nav a.active { background: var(--accent); color: white; border-color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; background: var(--card); }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 12px 0; }
+    label.field { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="text"], textarea, select {
+      width: 100%;
+      font: inherit;
+      padding: 8px 10px;
+      border: 1px solid #cfc6b8;
+      border-radius: 8px;
+      background: white;
+    }
+    textarea { min-height: 90px; }
+    .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .badge { font-size: 0.75rem; border-radius: 999px; padding: 2px 8px; background: #ece7df; color: var(--muted); }
+    .badge.high { background: #e7f6ef; color: var(--good); }
+    .badge.check { background: #fff4d6; color: var(--warn); }
+    .badge.blank { background: #f3e8ea; color: var(--bad); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    button {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: white;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    button.secondary { background: white; color: var(--ink); border-color: #cfc6b8; }
+    button.warn { background: white; color: var(--bad); border-color: #e3c1c6; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Job Search</h1>
+    <p class="muted">Drafts are filled for you. You review them, then you submit on the company site.</p>
+  </header>
+  <main>
+    {% if using_example %}
+      <div class="banner">This is the example profile. Copy <code>profile/profile.example.yaml</code> to <code>profile/profile.yaml</code> and replace it with your own facts before you apply.</div>
+    {% endif %}
+    {% block body %}{% endblock %}
+  </main>
+</body>
+</html>

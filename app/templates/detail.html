@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ application.company }}{% endblock %}
+{% block body %}
+<p><a href="/">Back to the queue</a></p>
+<div class="card">
+  <h2 style="margin: 0 0 6px">{{ application.company }}</h2>
+  <div>{{ application.title }}</div>
+  <div class="muted">{{ application.location }} · {{ application.ats }} · {{ application.age_text }}</div>
+  {% if application.url %}
+    <p><a href="{{ application.url }}" target="_blank" rel="noopener">Open the original posting</a></p>
+  {% endif %}
+  {% if application.note %}<p class="muted">{{ application.note }}</p>{% endif %}
+  {% if application.error %}<p class="muted">{{ application.error }}</p>{% endif %}
+</div>
+{% if saved %}<div class="notice ok">Saved. Corrections to custom questions were added to your answer bank.</div>{% endif %}
+{% if opened %}<div class="notice ok">A browser window is opening with this form filled. Submit it there yourself. This app does not click Submit.</div>{% endif %}
+<form method="post" action="/applications/{{ application.id }}">
+  {% for field in fields %}
+    <div class="card">
+      <label class="field" for="value_{{ loop.index0 }}">{{ field.label }}{% if field.required %} *{% endif %}</label>
+      {% if field.type == "textarea" %}
+        <textarea id="value_{{ loop.index0 }}" name="value_{{ loop.index0 }}">{{ field.value }}</textarea>
+      {% elif field.type in ["select", "multi"] and field.options %}
+        <select id="value_{{ loop.index0 }}" name="value_{{ loop.index0 }}">
+          <option value=""></option>
+          {% for option in field.options %}
+            <option value="{{ option.label }}" {% if field.value == option.label %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+          {% if field.value and field.value not in field.options | map(attribute='label') %}
+            <option value="{{ field.value }}" selected>{{ field.value }}</option>
+          {% endif %}
+        </select>
+      {% else %}
+        <input id="value_{{ loop.index0 }}" type="text" name="value_{{ loop.index0 }}" value="{{ field.value }}">
+      {% endif %}
+      <div class="meta">
+        <span class="badge {{ field.confidence }}">{{ field.confidence }}</span>
+        <span class="badge">{{ field.source }}</span>
+        {% if field.notes %}<span class="muted">{{ field.notes }}</span>{% endif %}
+      </div>
+    </div>
+  {% endfor %}
+  <div class="actions">
+    <button type="submit" name="action" value="save">Save</button>
+    <button type="submit" name="action" value="open">Save and open filled form</button>
+    <button type="submit" class="secondary" name="action" value="submitted">I submitted this</button>
+    <button type="submit" class="warn" name="action" value="skip">Skip</button>
+  </div>
+</form>
+{% endblock %}

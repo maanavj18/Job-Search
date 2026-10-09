@@ -1,0 +1,9 @@
+# Confirmed answers for questions that repeat across companies.
+# The review page adds to profile/answers.yaml when you save a correction.
+answers:
+  - question: Are you authorized to work in the United States?
+    answer: "Yes"
+  - question: Will you now or in the future require sponsorship?
+    answer: "No"
+  - question: How did you hear about this job?
+    answer: Online job listing

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Review queue{% endblock %}
+{% block body %}
+<nav>
+  {% for key, label in tabs %}
+    <a href="/?status={{ key }}" class="{% if status == key %}active{% endif %}">{{ label }} ({{ counts.get(key, 0) }})</a>
+  {% endfor %}
+</nav>
+{% if not jobs %}
+  <div class="card">Nothing in this list. Run <code>python -m app.cli run</code> to fetch roles and draft applications.</div>
+{% else %}
+  <table>
+    <thead>
+      <tr><th>Role</th><th>Location</th><th>Age</th><th>Board</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+        <tr>
+          <td>
+            <strong>{{ job.company }}</strong><br>
+            {{ job.title }}
+            {% if job.skip_reason %}<div class="muted">{{ job.skip_reason }}</div>{% endif %}
+            {% if job.error %}<div class="muted">{{ job.error }}</div>{% endif %}
+            {% if job.note %}<div class="muted">{{ job.note }}</div>{% endif %}
+          </td>
+          <td>{{ job.location }}</td>
+          <td>{{ job.age_text }}</td>
+          <td>{{ job.ats }}</td>
+          <td>
+            {% if job.application_id %}
+              <a href="/applications/{{ job.application_id }}">Review</a>
+            {% elif job.url %}
+              <a href="{{ job.url }}" target="_blank" rel="noopener">Open</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}
